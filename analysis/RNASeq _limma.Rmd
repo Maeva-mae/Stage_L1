@@ -1,0 +1,375 @@
+---
+title: "RNA Seq deseq2"
+output: html_notebook
+---
+
+# Libraries
+
+```{r}
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+# BiocManager::install("limma")
+# BiocManager::install("Glimma")
+# BiocManager::install("Mus.musculus")
+
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+# BiocManager::install("RNAseq123")
+
+library(limma)
+library(Glimma)
+library(edgeR)
+library(Mus.musculus)
+library(utils)
+# library(tidyr)
+library(ggplot2)
+#install.packages("gplots")
+library(gplots)
+library(RNAseq123)
+
+```
+
+
+# Packaging des données
+
+
+## Data packaging
+
+préparation des données
+
+```{r}
+# url <- "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE63310&format=file"
+# utils::download.file(url, destfile="GSE63310_RAW.tar", mode="wb") 
+utils::untar("~/Documents/Stage_Maeva_Girerd/data/tables/GSE63310_RAW.tar", exdir = ".")
+files <- c("GSM1545535_10_6_5_11.txt", "GSM1545536_9_6_5_11.txt", "GSM1545538_purep53.txt",
+  "GSM1545539_JMS8-2.txt", "GSM1545540_JMS8-3.txt", "GSM1545541_JMS8-4.txt",
+  "GSM1545542_JMS8-5.txt", "GSM1545544_JMS9-P7c.txt", "GSM1545545_JMS9-P8c.txt")
+for(i in paste(files, ".gz", sep="")){
+  R.utils::gunzip(i, overwrite=TRUE)
+}
+
+```
+
+```{r}
+files <- c("GSM1545535_10_6_5_11.txt", "GSM1545536_9_6_5_11.txt", 
+   "GSM1545538_purep53.txt", "GSM1545539_JMS8-2.txt", 
+   "GSM1545540_JMS8-3.txt", "GSM1545541_JMS8-4.txt", 
+   "GSM1545542_JMS8-5.txt", "GSM1545544_JMS9-P7c.txt", 
+   "GSM1545545_JMS9-P8c.txt")
+read.delim(files[1], nrow=5)
+```
+```{r}
+x <- readDGE(files, columns=c(1,3))
+class(x)
+```
+```{r}
+dim(x)
+```
+
+## Organising sample information
+
+Association des infos de l'échantillon aux colonnes de la matrice de comptage
+
+```{r}
+samplenames <- substring(colnames(x), 12, nchar(colnames(x)))
+samplenames
+```
+```{r}
+colnames(x) <- samplenames
+group <- as.factor(c("LP", "ML", "Basal", "Basal", "ML", "LP", 
+                     "Basal", "ML", "LP"))
+x$samples$group <- group
+lane <- as.factor(rep(c("L004","L006","L008"), c(3,4,2)))
+x$samples$lane <- lane
+x$samples
+x
+```
+
+## Organising gene annotations
+
+2eme trame de données utilisée pour stocker des informations au niveau des gènes associées aux lignes de la matrice de comptage
+
+```{r}
+# identifiants de gènes 
+
+geneid <- rownames(x)
+genes <- select(Mus.musculus, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
+                keytype="ENTREZID")
+head(genes)
+```
+```{r}
+genes <- genes[!duplicated(genes$ENTREZID),]
+```
+```{r}
+# données de comptage brutes avec des informations sur les échantillons et des annotations génétiques associées.
+
+x$genes <- genes
+x
+```
+
+# Data pre-processing
+
+## Transformations from the raw-scale
+
+L’expression des gènes est rarement considérée au niveau des comptages bruts car les banques séquencées à une plus grande profondeur entraîneront des comptages plus élevés. Il est plutôt courant de transformer les comptes bruts sur une échelle qui tient compte de ces différences de taille de bibliothèque.
+
+```{r}
+# comptes bruts converties en valeur CPM
+
+cpm <- cpm(x)
+lcpm <- cpm(x, log=TRUE)
+```
+```{r}
+# Calcul garantissant que deux comptes de lecture avec des valeurs CPM identiques auront également des valeurs log-CPM identiques.
+
+L <- mean(x$samples$lib.size) * 1e-6
+M <- median(x$samples$lib.size) * 1e-6
+c(L, M)
+```
+```{r}
+summary(lcpm)
+```
+
+## Removing genes that are lowly expressed
+
+```{r}
+# certains gènes ne sont pas exprimés dans tous les échantillons
+
+table(rowSums(x$counts==0)==9)
+```
+```{r}
+# filtrer les gènes : exclure certaines données non significatives ou inintéressantes
+
+keep.exprs <- filterByExpr(x, group=group)
+x <- x[keep.exprs,, keep.lib.sizes=FALSE]
+dim(x)
+```
+```{r}
+# code pour produire la figure 
+
+lcpm.cutoff <- log2(10/M + 2/L)
+library(RColorBrewer)
+nsamples <- ncol(x)
+col <- brewer.pal(nsamples, "Paired")
+par(mfrow=c(1,2))
+plot(density(lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="A. Raw data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:nsamples){
+den <- density(lcpm[,i])
+lines(den$x, den$y, col=col[i], lwd=2)
+}
+legend("topright", samplenames, text.col=col, bty="n")
+lcpm <- cpm(x, log=TRUE)
+plot(density(lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="B. Filtered data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:nsamples){
+den <- density(lcpm[,i])
+lines(den$x, den$y, col=col[i], lwd=2)
+}
+legend("topright", samplenames, text.col=col, bty="n")
+```
+
+## Normalising gene expression distributions
+La normalisation est nécessaire pour s’assurer que les distributions d’expression de chaque échantillon sont similaires dans l’ensemble de l’expérience.
+```{r}
+x <- calcNormFactors(x, method = "TMM")
+x$samples$norm.factors
+```
+```{r}
+x2 <- x
+x2$samples$norm.factors <- 1
+x2$counts[,1] <- ceiling(x2$counts[,1]*0.05)
+x2$counts[,2] <- x2$counts[,2]*5
+```
+```{r}
+# code pour produire la figure 
+
+par(mfrow=c(1,2))
+lcpm <- cpm(x2, log=TRUE)
+boxplot(lcpm, las=2, col=col, main="")
+title(main="A. Example: Unnormalised data",ylab="Log-cpm")
+x2 <- calcNormFactors(x2)  
+x2$samples$norm.factors
+```
+```{r}
+# code pour produire la figure
+
+lcpm <- cpm(x2, log=TRUE)
+boxplot(lcpm, las=2, col=col, main="")
+title(main="B. Example: Normalised data",ylab="Log-cpm")
+```
+## Unsupervised clustering of samples
+Le graphique montre les similitudes et les dissemblances entre les échantillons de manière non supervisée afin que l’on puisse avoir une idée de la mesure dans laquelle l’expression différentielle peut être détectée avant d’effectuer des tests formels.
+```{r}
+lcpm <- cpm(x, log=TRUE)
+par(mfrow=c(1,2))
+col.group <- group
+levels(col.group) <-  brewer.pal(nlevels(col.group), "Set1")
+col.group <- as.character(col.group)
+col.lane <- lane
+levels(col.lane) <-  brewer.pal(nlevels(col.lane), "Set2")
+col.lane <- as.character(col.lane)
+plotMDS(lcpm, labels=group, col=col.group)
+title(main="A. Sample groups")
+plotMDS(lcpm, labels=lane, col=col.lane, dim=c(3,4))
+title(main="B. Sequencing lanes")
+```
+```{r}
+glMDSPlot(lcpm, labels=paste(group, lane, sep="_"), 
+          groups=x$samples[,c(2,5)], launch=FALSE)
+```
+
+
+# Differential expression analysis
+
+## Creating a design matrix and contrasts
+voir quels gènes sont exprimés à différents niveaux entre les trois populations cellulaires profilées.
+```{r}
+#configurer une matrice de conception avec les info de la pop C
+design <- model.matrix(~0+group+lane)
+colnames(design) <- gsub("group", "", colnames(design))
+design
+```
+```{r}
+# mis en place des contrastes pour les comparaisons par paires entre les populations cellulaires 
+
+contr.matrix <- makeContrasts(
+   BasalvsLP = Basal-LP, 
+   BasalvsML = Basal - ML, 
+   LPvsML = LP - ML, 
+   levels = colnames(design))
+contr.matrix
+```
+## Removing heteroscedascity from count data
+Les moyennes (axe des x) et les variances (axe des y) de chaque gène sont tracées pour montrer la dépendance entre les deux
+La tendance a diminuer est supprimée après l’application des poids de précision
+```{r}
+par(mfrow=c(1,2))
+v <- voom(x, design, plot=TRUE)
+v
+```
+```{r}
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+plotSA(efit, main="Final model: Mean-variance trend")
+```
+
+## Examining the number of DE genes
+```{r}
+# résumé du nombre de gènes significativement régulés à la hausse et à la baisse, pour un aperçu rapide des niveaux d’expression différentiels
+# valeurs exprimer selo le seuil de p-value
+
+summary(decideTests(efit))
+```
+```{r}
+# en plus de la p-value on ajoute une valeur minimale aux log-fold-changes (log-FC)
+
+tfit <- treat(vfit, lfc=1)
+dt <- decideTests(tfit)
+summary(dt)
+```
+```{r}
+# 0 représente les gènes qui ne sont pas DE, 1 ceux qui sont régulés à la hausse et -1 à la baisse => identifier les gènes DE
+
+de.common <- which(dt[,1]!=0 & dt[,2]!=0)
+length(de.common)
+```
+```{r}
+head(tfit$genes$SYMBOL[de.common], n=20)
+```
+```{r}
+vennDiagram(dt[,1:2], circle.col=c("turquoise", "salmon"))
+```
+```{r}
+write.fit(tfit, dt, file="results.txt")
+```
+
+## Examining individual DE genes from top to bottom
+```{r}
+# répertoire des gènes DE
+
+basal.vs.lp <- topTreat(tfit, coef=1, n=Inf)
+basal.vs.ml <- topTreat(tfit, coef=2, n=Inf)
+head(basal.vs.lp)
+```
+```{r}
+head(basal.vs.ml)
+```
+
+## Useful graphical representations of differential expression results
+```{r}
+# affiche les log-FCs du modèle linéaire ajustés par rapport aux valeurs moyennes de log-CPM
+
+plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1], 
+       xlim=c(-8,13))
+```
+```{r}
+glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
+         side.main="ENTREZID", counts=lcpm, groups=group, launch=FALSE)
+```
+
+```{r}
+basal.vs.lp.topgenes <- basal.vs.lp$ENTREZID[1:100]
+i <- which(v$genes$ENTREZID %in% basal.vs.lp.topgenes)
+mycol <- colorpanel(1000,"blue","white","red")
+
+
+heatmap.2(lcpm[i,], scale="row", width = 35, height = 500,
+   labRow=v$genes$SYMBOL[i], labCol=group, 
+   col=mycol, trace="none", density.info="none", 
+    lhei=c(2,10), dendrogram="column")
+```
+
+# Test des ensembles de gènes avec caméra
+
+Test compétitif pour évaluer si les gènes d’un ensemble donné sont très bien classés en termes d’expression différentielle par rapport aux gènes qui ne sont pas dans l’ensemble. 
+
+```{r}
+# test d'ensembles de gènes adaptées pour la souris
+
+load(system.file("extdata", "mouse_c2_v5p1.rda", package = "RNAseq123"))
+idx <- ids2indices(Mm.c2,id=rownames(v))
+idx
+
+cam.BasalvsLP <- camera(v,idx,design,contrast=contr.matrix[,1])
+head(cam.BasalvsLP,5)
+```
+```{r}
+cam.BasalvsML <- camera(v,idx,design,contrast=contr.matrix[,2])
+head(cam.BasalvsML,5)
+```
+```{r}
+cam.LPvsML <- camera(v,idx,design,contrast=contr.matrix[,3])
+head(cam.LPvsML,5)
+```
+
+```{r}
+# diagramme à code-barres des ensembles de gènes 
+
+barcodeplot(efit$t[,3], index=idx$LIM_MAMMARY_LUMINAL_MATURE_UP, 
+            index2=idx$LIM_MAMMARY_LUMINAL_MATURE_DN, main="LPvsML")
+
+# Notez que ces ensembles vont dans la direction opposée dans notre ensemble de données en raison de notre paramétrage qui compare LP à ML plutôt que l’inverse (si le contraste était inversé, les directions seraient cohérentes).
+```
+
+
+
+
+
+
+
+# Logiciels et code utilisés
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+

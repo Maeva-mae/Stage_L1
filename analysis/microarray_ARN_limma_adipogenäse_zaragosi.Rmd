@@ -1,0 +1,221 @@
+---
+title: "microarray ARN limma adipogenèse zaragosi"
+output: html_notebook
+---
+
+# Libraries
+
+```{r}
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+
+# BiocManager::install("limma")
+# BiocManager::install("Glimma")
+# BiocManager::install("RNAseq123")
+# BiocManager::install("GEOquery")
+# BiocManager::install("umap")
+
+library(limma)
+library(Glimma)
+library(edgeR)
+library(utils)
+library(tidyr)
+library(ggplot2)
+#install.packages("gplots")
+library(gplots)
+library(RNAseq123)
+library(GEOquery)
+library(umap)
+library(dplyr)
+```
+
+# load series and platform data from GEO
+
+```{r}
+gset <- getGEO("GSE29207", GSEMatrix =TRUE, AnnotGPL=FALSE)
+gset
+if (length(gset) > 1) idx <- grep("GPL13607", attr(gset, "names")) else idx <- 1
+gset
+gset <- gset[[idx]]
+gset
+```
+
+
+# make proper column names to match toptable 
+```{r}
+fvarLabels(gset) <- make.names(fvarLabels(gset))
+```
+
+
+# group membership for all samples
+```{r}
+gsms <- "0000001111"
+sml <- strsplit(gsms, split="")[[1]]
+```
+
+
+# log2 transformation
+```{r}
+ex <- exprs(gset)
+qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
+LogC <- (qx[5] > 100) ||
+          (qx[6]-qx[1] > 50 && qx[2] > 0)
+if (LogC) { ex[which(ex <= 0)] <- NaN
+  exprs(gset) <- log2(ex) }
+```
+
+
+# assign samples to groups and set up design matrix
+```{r}
+gs <- factor(sml)
+groups <- make.names(c("mi","antimi"))
+levels(gs) <- groups
+gset$group <- gs
+```
+
+
+
+# Differential expression analysis
+```{r}
+#configurer une matrice de conception avec les info de la pop C
+design <- model.matrix(~group + 0, gset)
+colnames(design) <- gsub("group", "", colnames(design))
+design
+```
+```{r}
+# mis en place des contrastes pour les comparaisons par paires entre les populations cellulaires 
+
+contr.matrix <- makeContrasts(
+   mivsantimi = mi-antimi, 
+   levels = colnames(design))
+contr.matrix
+```
+```{r}
+par(mfrow=c(1,2))
+v <- voom(gset, design, plot=TRUE)
+v
+```
+```{r}
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+plotSA(efit, main="Final model: Mean-variance trend")
+```
+```{r}
+# résumé du nombre de gènes significativement régulés à la hausse et à la baisse, pour un aperçu rapide des niveaux d’expression différentiels
+# valeurs exprimer selo le seuil de p-value
+
+summary(decideTests(efit))
+```
+```{r}
+# en plus de la p-value on ajoute une valeur minimale aux log-fold-changes (log-FC)
+
+# on choisit une valeur de lfc diff de 0 pour qu'il y est une diff
+tfit <- treat(vfit, lfc=0.05
+              #, lfc=1
+              )
+dt <- decideTests(tfit)
+summary(dt)
+```
+
+```{r}
+head(tfit$genes$GeneName, n=20)
+```
+```{r}
+write.fit(tfit, dt, file="results_microarray.txt")
+```
+
+```{r}
+# répertoire des gènes DE
+
+mi.vs.antimi <- topTreat(tfit, coef=1, n=Inf)
+head(mi.vs.antimi)
+```
+```{r}
+# affiche les log-FCs du modèle linéaire ajustés par rapport aux valeurs moyennes de log-CPM
+
+plotMD(tfit, column=1, status=dt[,1], main=colnames(tfit)[1], 
+       xlim=c(3.5,5.5))
+```
+```{r}
+cpm <- cpm(gset)
+lcpm <- cpm(gset, log=TRUE)
+```
+
+```{r}
+gset$phenoData
+
+group <- as.factor(gset@phenoData@data[["title"]])
+
+glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
+         side.main="ENTREZID", counts=lcpm, groups=gs)
+```
+
+```{r}
+mi.vs.antimi.topgenes <- mi.vs.antimi$GeneName[1:100]
+i <- which(v$genes$GeneName %in% mi.vs.antimi.topgenes)
+i
+mycol <- colorpanel(1000,"blue","white","red")
+
+lcpm[i,]
+heatmap.2(lcpm[i,], scale="row", width = 2, height = 2,
+   labRow=v$genes$GeneName[i], labCol=gs, 
+   col=mycol, trace="none", density.info="none", 
+    lhei=c(2,10), dendrogram="column")
+```
+
+# Test des ensembles de gènes avec caméra
+
+Test compétitif pour évaluer si les gènes d’un ensemble donné sont très bien classés en termes d’expression différentielle par rapport aux gènes qui ne sont pas dans l’ensemble. 
+
+```{r}
+# Competitive Gene Set Test Accounting for Inter-gene Correlation
+# Test whether a set of genes is highly ranked relative to other genes in terms of differential expression, accounting for inter-gene correlation.
+
+# we found how to retrieve data from the Molecular Signature Database, for human, from ids2indices documentation
+# C2 curated gene sets (rdata file)
+download.file("https://bioinf.wehi.edu.au/software/MSigDB/human_c2_v5p2.rdata", "human_c2_v5p2.rdata", mode = "wb")
+
+load("human_c2_v5p2.rdata")
+idx <- ids2indices(Hs.c2, id=rownames(v))
+
+cam.mivsantimi <- camera(v,
+                        # to add idx
+                        idx,
+                        design,contrast=contr.matrix[,1])
+head(cam.mivsantimi,5)
+
+cam.mivsantimi %>% filter(PValue < 0.05)
+cam.mivsantimi %>% filter(PValue < 0.05, Direction =="Up")
+cam.mivsantimi %>% filter(PValue < 0.05, Direction =="Down")
+
+```
+
+
+```{r}
+# diagramme à code-barres des ensembles de gènes 
+
+barcodeplot(efit$t[,1], index=idx$BIOCARTA_FEEDER_PATHWAY, 
+            index2=idx$BIOCARTA_TOB1_PATHWAY, main="mivsantimi")
+
+```
+
+
+# conclusion 
+Tous ces tests nous ont permis d'observer une différences dans l'expréssion des gènes selon la condition dans laquelle les microARN sont soit inactivés, soit activés. 
+De plus, dans la heatmap, on distangue bien les deux groupes d'échantillons. En effet, on peut voir que dans les 20 premiers gènes analysés, il y a une réelle différence selon laquelle des gènes sur-exprimés dans le groupe antimi seront sous-exprimés dans le groupe mi. 
+On comprend avec toutes ces expériences que ces gènes s'activent dès lors qu'on inhibe certains microARN.
+De plus, pour la dernière expérience, nous sommes allés récupérer une base de données qui contient des groupes de gènes organisés en pathway. On a comparé cette base par rapport à la notre et il en ressort 101 gènes ayant des différence statistiquement significative dans leur expression, c'est à dire ayant une p-value > 0.05.On a 43 gènes sur-exprimés et 58 sous-exprimés. 
+
+On pourrait donc se demander quel peut-être le sens de ces résultats dans la régulation de la différenciation adipogénique.
+
+
+
+
+
+# Logiciels et code utilisés
+
+```{r}
+sessionInfo()
+```
+

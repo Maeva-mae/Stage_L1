@@ -1,0 +1,320 @@
+---
+title: "Bio_tut"
+output: html_notebook
+author: "Maeva Girerd"
+---
+
+```{r}
+# install.packages("BiocManager")
+# BiocManager::install("Bioconductor")
+# install.packages("dplyr")
+# install.packages("tidyr")
+# install.packages("ggplot2")
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Programming with R
+## addition
+```{r}
+12/3
+```
+
+## Data types
+```{r}
+num_var <- 10.5         # Numeric variable
+char_var <- "Hello"     # Character variable
+logical_var <- TRUE     # Logical variable
+int_var <- as.integer(5) # Integer variable
+```
+
+## Variables and assignement
+```{r}
+x <- 10
+y <- 5
+z <- x + y
+print(z) 
+```
+## Introduction to vectors
+```{r}
+vec1 <- c(1, 2, 3, 4, 5)
+vec2 <- c("apple", "banana", "orange")
+
+result <- vec1 + vec1
+print(result) 
+fruits <- c(vec2, "grape")
+print(fruits)
+```
+## R data structures
+```{r}
+num_var <- 10.5         
+char_var <- "Hello"     
+logical_var <- TRUE     
+int_var <- as.integer(5)
+```
+
+## Data Manipulation in R
+```{r}
+df <- data.frame(
+  Name = c("Alice", "Bob", "Charlie"),
+  Age = c(25, 30, 22),
+  Score = c(90, 85, 78)
+)
+
+subset_df <- df[df$Age > 25, ]
+print(subset_df)
+```
+## Data aggragation and summarization
+```{r}
+# install.packages("dplyr")
+#library(dplyr)
+```
+```{r}
+df <- data.frame(
+  Group = c("A", "A", "B", "B", "A", "B"),
+  Value = c(10, 20, 15, 25, 30, 35)
+)
+
+grouped_df <- df %>% group_by(Group) %>% summarize(Mean_Value = mean(Value))
+print(grouped_df)
+```
+
+## Data transformation
+```{r}
+#install.packages("tidyr")
+# library(tidyr)
+```
+
+```{r}
+wide_df <- data.frame(
+  ID = c(1, 2),
+  Jan = c(100, 150),
+  Feb = c(120, 160),
+  Mar = c(130, 170)
+)
+
+long_df <- pivot_longer(wide_df, cols = -ID, names_to = "Month", values_to = "Value")
+print(long_df)
+```
+
+# Data visualization in R
+## Introduction to ggplot2 for data visualization
+
+```{r}
+#install.packages("ggplot2")
+# library(ggplot2)
+```
+
+```{r}
+df <- data.frame(
+  Category = c("A", "B", "C"),
+  Value = c(10, 20, 15)
+)
+
+ggplot(data = df, aes(x = Category, y = Value)) +
+  geom_bar(stat = "identity")
+```
+
+
+```{r}
+df <- data.frame(
+  X = c(1, 2, 3, 4, 5),
+  Y = c(10, 20, 15, 25, 30)
+)
+
+ggplot(data = df, aes(x = X, y = Y)) +
+  geom_point()
+```
+
+
+```{r}
+df <- data.frame(
+  X = c(1, 2, 3, 4, 5),
+  Y = c(10, 20, 15, 25, 30)
+)
+
+ggplot(data = df, aes(x = X, y = Y, color = "My Data Points")) +
+  geom_point() +
+  labs(title = "Scatter Plot Example", x = "X Axis", y = "Y Axis") +
+  theme_minimal()
+```
+
+```{r}
+df <- data.frame(
+  Category = rep(c("A", "B"), each = 5),
+  Value = c(10, 20, 15, 25, 30)
+)
+
+ggplot(data = df, aes(x = Category, y = Value)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ Category)
+```
+
+
+# Control structures and functions
+## Conditional statements 
+
+```{r}
+x <- 10
+
+if (x > 0) {
+  print("x is positive.")
+} else {
+  print("x is non-positive.")
+}
+```
+## Loops
+
+```{r}
+for (i in 1:5) {
+  print(paste("Iteration:", i))
+}
+```
+## Writing and using functions in R
+
+```{r}
+square <- function(x) {
+  return(x * x)
+}
+
+result <- square(5)
+print(result) 
+```
+# Functional programming with apply family function
+
+```{r}
+matrix_data <- matrix(1:9, nrow = 3)
+
+row_means <- apply(matrix_data, 1, mean)
+print(row_means)
+```
+
+
+# Data import and export
+## Reading data
+
+```{r}
+csv_data <- read.csv("~/Documents/Stage_Maeva_Girerd/data/tables/csv/data_Bio_tut.csv")
+```
+
+```{r}
+csv_data %>% filter(name == "Charles")
+csv_data %>% filter(height > 150)
+csv_data
+```
+
+```{r}
+csv_data_height_150 <- csv_data %>% filter(height > 150)
+csv_data_height_150
+print(dim(csv_data))
+csv_data
+```
+
+```{r}
+# Writing data to CSV file
+write.csv(x= csv_data_height_150, "~/Documents/Stage_Maeva_Girerd/results/csv/data_Bio_tut_output.csv")
+```
+
+```{r}
+# == egalité
+5 == 6
+# != inegalité
+"ciao" != "hello"
+```
+
+
+# Statistical analysis in R
+## Descriptive statistics
+
+```{r}
+# Descriptive statistics in R
+data <- c(10, 15, 20, 25, 30)
+mean_value <- mean(data)
+median_value <- median(data)
+sd_value <- sd(data)
+print(mean_value, median_value, sd_value)
+```
+```{r}
+random_data <- rnorm(100, mean = 0, sd = 1)
+print(head(random_data))
+print(length(random_data))
+```
+
+```{r}
+summary(csv_data)
+```
+### T-Test
+```{r}
+# Creating df with info for males and females
+female_df <- csv_data %>% filter(sex == "F")
+male_df <- csv_data %>% filter(sex == "M")
+
+female_df
+male_df
+```
+```{r}
+height_F <- female_df$height
+height_M <- male_df$height
+
+# Perform independent t-test
+t_test_result <- t.test(height_F, height_M)
+print(t_test_result)
+```
+p-value = 0.8674
+p-value > 0.05, cela signifie qu'il n'y a pas de différence statistiquement significative entre la taille des hommes et des femmes
+
+### corrélation
+Female is 1
+Male is 0
+```{r}
+csv_data$sex[csv_data$sex =="F"] <- 1
+csv_data$sex[csv_data$sex =="M"] <- 0
+csv_data
+```
+
+blue is 0
+green is 1
+brown is 2
+For practical reasons (just to see how the test works),
+we modified the categorical variables into numeric.
+```{r}
+csv_data$eye_color[csv_data$eye_color =="blue"] <- 0
+csv_data$eye_color[csv_data$eye_color =="green"] <- 1
+csv_data$eye_color[csv_data$eye_color =="brown"] <- 2
+csv_data
+```
+
+```{r}
+csv_data_for_correlation <- csv_data %>% select(- name)
+
+csv_data_for_correlation$eye_color <- as.integer(csv_data_for_correlation$eye_color)
+
+csv_data_for_correlation$sex <- as.integer(csv_data_for_correlation$sex)
+
+csv_data_for_correlation
+
+cor(csv_data_for_correlation)
+```
+test de correlation
+```{r}
+cor.test(x=csv_data_for_correlation$height, y=csv_data_for_correlation$weight)
+```
+Entre le poids et la taille il y a une corrélation positive forte (cor = 0.9943661), qui est statistiquement significative (p-vvalue = 4.562e-06 < 0.05)
+
+correlation entre le sexe et la couleur des yeux
+correlation entre le sexe et le poids
+
+### regéssion linéaire
+```{r}
+lm_height_weight <- lm(csv_data_for_correlation$height~csv_data_for_correlation$weight)
+summary(lm_height_weight)
+
+plot(csv_data_for_correlation$height~csv_data_for_correlation$weight, data=csv_data_for_correlation) 
+abline(lm_height_weight)
+```
+
+
+```{r}
+sessionInfo()
+```

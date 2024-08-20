@@ -1,0 +1,451 @@
+---
+title: "abalone"
+author: "Maeva"
+date: "2024-07-17"
+output: html_document
+---
+
+```{r}
+# install.packages("dplyr")
+# install.packages("tidyr")
+# install.packages("ggplot2")
+# install.packages("BiocManager")
+# BiocManager::install("Bioconductor")
+library("dplyr")
+library("tidyr")
+library(ggplot2)
+```
+
+# Statistical analysis on Abalone
+Annalyse entre les hommes et les femmes puis entre les enfants et les adultes pour voir si l'âge a une influance sur les valeurs
+```{r}
+csv_abalone <- read.csv("~/Documents/Stage_Maeva_Girerd/data/tables/csv/abalone.csv")
+rownames(csv_abalone) <- csv_abalone$X
+csv_abalone <- csv_abalone %>% select(- X)
+csv_abalone
+```
+
+```{r}
+csv_abalone_sex_FM <- csv_abalone %>% filter(Sex != "I")
+csv_abalone_sex_FM
+```
+```{r}
+# Writing data to CSV file
+write.csv(x= csv_abalone_sex_FM, "~/Documents/Stage_Maeva_Girerd/results/csv/abalone_sex_FM_output.csv")
+```
+
+```{r}
+summary(csv_abalone_sex_FM)
+```
+```{r}
+# Creating df with info for males and females
+females_df <- csv_abalone_sex_FM %>% filter(Sex == "F")
+males_df <- csv_abalone_sex_FM %>% filter(Sex == "M")
+
+females_df
+males_df
+```
+```{r}
+# correlation Length
+Length_females <- females_df$Length
+Length_males <- males_df$Length
+
+# Perform independent t-test
+t_test_result <- t.test(Length_females, Length_males)
+print(t_test_result)
+
+
+
+#correlation diameter
+Diameter_females <- females_df$Diameter
+Diameter_males <- males_df$Diameter
+
+# Perform independent t-test
+t_test_result <- t.test(Diameter_females, Diameter_males)
+print(t_test_result)
+
+
+
+#correlation height
+height_females <- females_df$Height
+height_males <- males_df$Height
+
+# Perform independent t-test
+t_test_result <- t.test(height_females, height_males)
+print(t_test_result)
+
+
+
+#correlation Whole weight
+Whole_weight_females <- females_df$Whole_weight
+Whole_weight_males <- males_df$Whole_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Whole_weight_females, Whole_weight_males)
+print(t_test_result)
+
+
+#correlation Shucked weight
+Shucked_weight_females <- females_df$Shucked_weight
+Shucked_weight_males <- males_df$Shucked_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Shucked_weight_females, Shucked_weight_males)
+print(t_test_result)
+
+
+
+#correlation Viscera weight
+Viscera_weight_females <- females_df$Viscera_weight
+Viscera_weight_males <- males_df$Viscera_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Viscera_weight_females, Viscera_weight_males)
+print(t_test_result)
+
+
+#correlation Shell weight
+Shell_weight_females <- females_df$Shell_weight
+Shell_weight_males <- males_df$Shell_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Shell_weight_females, Shell_weight_males)
+print(t_test_result)
+```
+
+On remarque dans ce premier test que seule la p-value du "Shucked_weight" est > 0.05
+Ce qui veut dire qu'il n'y a pas de différence statistiquement significative entre le "Shucked_weight" des males et des femelles
+
+Pour le reste la p-value est < 0.05 donc il y a une différence statistiquement significative entre les males et les femelles
+
+```{r}
+csv_abalone_sex_FM$Sex[csv_abalone_sex_FM$Sex =="F"] <- 1
+csv_abalone_sex_FM$Sex[csv_abalone_sex_FM$Sex =="M"] <- 0
+
+csv_abalone_sex_FM$Sex <- as.integer(csv_abalone_sex_FM$Sex)
+csv_abalone_sex_FM
+
+```
+```{r}
+csv_abalone_sex_FM_female <- csv_abalone_sex_FM %>% filter(Sex == 1)
+csv_abalone_sex_FM_female <- csv_abalone_sex_FM_female %>% select(-Sex)
+
+csv_abalone_sex_FM_male <- csv_abalone_sex_FM %>% filter(Sex == 0)
+csv_abalone_sex_FM_male <-csv_abalone_sex_FM_male %>% select(-Sex)
+```
+
+```{r}
+cor(csv_abalone_sex_FM_female)
+```
+```{r}
+cor(csv_abalone_sex_FM_male)
+```
+Toutes les corrélations entre les paramètres sont à peu près les mêmes entre les males et les femelles et sont très élevées (0.9) à part pour la hauteur où les correlations avec tous les autres paramètres sont beaucoups moins élevées chez les femelles que chez les males ( 0.5 VS 0.8)
+
+On peut donc emettre l'hypothèse qu'au cours de leur croissance, la hauteur chez les femelles reste constante tandis que les autres paramètres continue d'évoluer à l'inverse des males où tous les paramètres sont en constante évolution
+
+
+
+Qu'en est-il des paramètres physiques des enfants par rapport à ceux des adultes ?
+
+
+```{r}
+csv_abalone_age_AE <- csv_abalone 
+csv_abalone_age_AE$Sex[csv_abalone_age_AE$Sex =="F"] <- "A"
+csv_abalone_age_AE$Sex[csv_abalone_age_AE$Sex =="M"] <- "A"
+csv_abalone_age_AE
+```
+```{r}
+# Writing data to CSV file
+write.csv(x= csv_abalone_age_AE, "~/Documents/Stage_Maeva_Girerd/results/csv/abalone_age_AE_output.csv")
+```
+
+```{r}
+summary(csv_abalone_age_AE)
+```
+```{r}
+# Creating df with info for males and females
+adults_df <- csv_abalone_age_AE %>% filter(Sex == "A")
+infants_df <- csv_abalone_age_AE %>% filter(Sex == "I")
+
+adults_df
+infants_df
+```
+```{r}
+# correlation Length
+Length_adults <- adults_df$Length
+Length_infants <- infants_df$Length
+
+# Perform independent t-test
+t_test_result <- t.test(Length_adults, Length_infants)
+print(t_test_result)
+
+
+
+#correlation diameter
+Diameter_adults <- adults_df$Diameter
+Diameter_infants <- infants_df$Diameter
+
+# Perform independent t-test
+t_test_result <- t.test(Diameter_adults, Diameter_infants)
+print(t_test_result)
+
+
+
+#correlation height
+height_adults <- adults_df$Height
+height_infants <- infants_df$Height
+
+# Perform independent t-test
+t_test_result <- t.test(height_adults, height_infants)
+print(t_test_result)
+
+
+
+#correlation Whole weight
+Whole_weight_adults <- adults_df$Whole_weight
+Whole_weight_infants<- infants_df$Whole_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Whole_weight_adults, Whole_weight_infants)
+print(t_test_result)
+
+
+#correlation Shucked weight
+Shucked_weight_adults <- adults_df$Shucked_weight
+Shucked_weight_infants <- infants_df$Shucked_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Shucked_weight_adults, Shucked_weight_infants)
+print(t_test_result)
+
+
+
+#correlation Viscera weight
+Viscera_weight_adults <- adults_df$Viscera_weight
+Viscera_weight_infants <- infants_df$Viscera_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Viscera_weight_adults, Viscera_weight_infants)
+print(t_test_result)
+
+
+#correlation Shell weight
+Shell_weight_adults <- adults_df$Shell_weight
+Shell_weight_infants <- infants_df$Shell_weight
+
+# Perform independent t-test
+t_test_result <- t.test(Shell_weight_adults, Shell_weight_infants)
+print(t_test_result)
+```
+
+On remarque dans ce second test que toutes les valeurs de p-value sont < 0.05. Cela voudrait dire que la différence entre les paramètres physiques des enfants et ceux des adultes est statistiquement significative.
+
+
+```{r}
+csv_abalone_age_AE$Sex[csv_abalone_age_AE$Sex =="A"] <- 1
+csv_abalone_age_AE$Sex[csv_abalone_age_AE$Sex =="I"] <- 0
+
+csv_abalone_age_AE$Sex <- as.integer(csv_abalone_age_AE$Sex)
+csv_abalone_age_AE
+
+```
+```{r}
+csv_abalone_age_AE_adult <- csv_abalone_age_AE %>% filter(Sex == 1)
+csv_abalone_age_AE_adult <- csv_abalone_age_AE_adult %>% select(-Sex)
+
+csv_abalone_age_AE_infant <- csv_abalone_age_AE %>% filter(Sex == 0)
+csv_abalone_age_AE_infant <-csv_abalone_age_AE_infant %>% select(-Sex)
+```
+
+```{r}
+cor(csv_abalone_age_AE_adult)
+```
+```{r}
+cor(csv_abalone_age_AE_infant)
+```
+La première chose qu'on peut voir ici en comparant la corrélation des paramètres physiques chez l'enfant et chez l'adulte est que chez ce dernier toutes les valeurs sont inférieurs à celles chez l'enfant.
+Cela pourrait s'expliquer biologiquement par l'évolution plus rapide et plus développée chez les enfants afin d'acquérir toutes les caractéristiques necessaires pour la vie adulte
+
+De plus on remarque encore une fois que toutes les corrélations de la hauteur avec tous les autres paramètres physiques sont bien plus significatives chez les enfants que chez les adultes
+Cela rejoint l'hypothèse du dessus par rapport à la croissance.
+
+
+```{r}
+#correlation height
+height_adults <- adults_df$Height
+height_infants <- infants_df$Height
+
+# Perform independent t-test
+t_test_result <- t.test(height_adults, height_infants)
+print(t_test_result)
+```
+De plus, grâce au T-test que j'avais fait précédement et que j'ai remis ci dessus, on peut voir qu'en comparant la hauteur des enfants par rapport à celle des adultes on a une p-value de 2.2e-16 qui est largement inférieure à 0.05. 
+Ce qui veut dire qu'il y a une différence statistiquement significative entre la taille des enfants et celle des adultes 
+
+
+Cela confirmerait donc mon hypothèse de croissance selon laquelle le bébé naissant petit à besoin d'une évolution de tous ces paramètres en même temps afin d'acquérir la carrure nécessaire pour l'âge adulte.
+
+
+
+On pourrait peut être comparer les valeurs écrites chez l'enfant par rapport aux valeurs écrites chez le male pour voir si les valeurs chez les males sont inférieurs à celles des enfants
+```{r}
+cor(csv_abalone_sex_FM_male)
+```
+```{r}
+cor(csv_abalone_age_AE_infant)
+```
+On observe bien ici que les corrélations de la hauteur avec les autres paramètres physiques chez l'enfant sont plus importantes que celles chez le male, bien que l'écart soit petit.
+
+
+# Représentation des observations
+
+```{r}
+abalone <- read.csv("~/Documents/Stage_Maeva_Girerd/data/tables/csv/abalone.csv")
+abalone$X <- NULL
+abalone
+```
+
+```{r}
+abalone
+```
+
+```{r}
+abalone
+
+# Group by the 'Sex' column and calculate the mean for each group
+mean_data <- abalone %>%
+  group_by(Sex) %>%
+  summarize(across(everything(), mean))
+
+# Transform the DataFrame into a long format suitable for ggplot2
+long_mean_data <- mean_data %>%
+  pivot_longer(cols = -Sex, names_to = "Parameter", values_to = "Mean")
+
+# Print the resulting DataFrame
+print(long_mean_data)
+
+# Create a plot with ggplot2
+ggplot(long_mean_data, aes(x = Parameter, y = Mean, fill = Sex)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Mean Values of Physical Parameters by Sex",
+       x = "Parameter",
+       y = "Mean Value") +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+abalone$Sex <-  ifelse(abalone$Sex == "I", 0, ifelse(abalone$Sex  == "M", 1, 2))
+abalone
+cor(abalone)
+```
+
+```{r}
+abalone_adult <-  abalone%>% filter(abalone$Sex != 0)
+cor(abalone_adult)
+```
+
+```{r}
+abalone_inf <- abalone%>% filter(abalone$Sex == 0)
+abalone_inf$Sex = NULL
+cor(abalone_inf)
+```
+
+```{r}
+abalone_male <- abalone%>% filter(abalone$Sex == 1)
+abalone_male$Sex = NULL
+cor(abalone_male)
+```
+
+```{r}
+abalone_female <- abalone%>% filter(abalone$Sex == 2)
+abalone_female$Sex = NULL
+cor(abalone_female)
+```
+
+```{r}
+cor_abalone <- cor(abalone)
+abalone['sex_category'] <- "all"
+
+cor_abalone_adult <- cor(abalone_adult)
+abalone_adult['sex_category'] <- "adults"
+
+cor_abalone_inf <- cor(abalone_inf)
+abalone_inf['sex_category'] <- "infants"
+
+cor_abalone_male <- cor(abalone_male)
+abalone_male['sex_category'] <- "male (adult)"
+
+cor_abalone_female <- cor(abalone_female)
+abalone_female['sex_category'] <- "female (adult)"
+
+
+create_df <- function(cor_abalone, var_name, category){
+  parameter_names <- colnames(cor_abalone)
+  correlation_values <- as.vector(cor_abalone[,var_name])
+  correlation_df <- data.frame(parameter = parameter_names, correlations = correlation_values)
+  print(correlation_df)
+  correlation_df$sex_category <- category
+  return(correlation_df)
+}
+
+var_name <- "Height"
+
+cor_abalone_df <- create_df(cor_abalone, var_name, "all")
+cor_abalone_adult_df <- create_df(cor_abalone_adult, var_name, "adult")
+cor_abalone_inf_df <- create_df(cor_abalone_inf, var_name, "inf")
+cor_abalone_male_df <- create_df(cor_abalone_male, var_name, "male")
+cor_abalone_female_df <- create_df(cor_abalone_female, var_name, "female")
+correlation_df <- rbind(cor_abalone_df, cor_abalone_adult_df)
+correlation_df <- rbind(correlation_df, cor_abalone_inf_df)
+correlation_df <- rbind(correlation_df, cor_abalone_male_df)
+correlation_df <- rbind(correlation_df, cor_abalone_female_df)
+correlation_df <- correlation_df %>% filter(parameter != "Sex" & parameter != "Height")
+  
+ggplot(correlation_df, aes(x = parameter, y = correlations, fill = sex_category)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Mean Values of Physical Parameters by Sex",
+       x = "Parameter",
+       y = "Correlations") + ggtitle(paste0("Correlation between ", var_name, " and the rest of the parameters"))+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+
+
+
+# régression linéaire
+```{r}
+csv_abalone_sex_FM_male
+lm_height_length_male <- lm(csv_abalone_sex_FM_male$Height~csv_abalone_sex_FM_male$Length)
+summary(lm_height_length_male)
+
+plot(csv_abalone_sex_FM_male$Height~csv_abalone_sex_FM_male$Length, data=csv_abalone_sex_FM_male, ylim=c(0,0.25))
+title("height vs length for male")
+abline(lm_height_length_male, col="red")
+```
+
+```{r}
+csv_abalone_sex_FM_female
+lm_height_length_female <- lm(csv_abalone_sex_FM_female$Height~csv_abalone_sex_FM_female$Length)
+summary(lm_height_length_female)
+
+plot(csv_abalone_sex_FM_female$Height~csv_abalone_sex_FM_female$Length, data=csv_abalone_sex_FM_female, ylim=c(0,0.25))
+title("height vs length for female")
+abline(lm_height_length_female, col="red") 
+
+```
+```{r}
+csv_abalone_age_AE_infant
+lm_height_length_infant <- lm(csv_abalone_age_AE_infant$Height~csv_abalone_age_AE_infant$Length)
+summary(lm_height_length_infant)
+
+plot(csv_abalone_age_AE_infant$Height~csv_abalone_age_AE_infant$Length, data=csv_abalone_age_AE_infant, ylim=c(0,0.25))
+title("height vs length for infant")
+abline(lm_height_length_infant, col="red")
+
+```
+
+```{r}
+sessionInfo()
+```
+

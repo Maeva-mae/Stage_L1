@@ -1,0 +1,130 @@
+---
+title: "plots"
+author: "Paola Porracciolo"
+date: "2024-07-17"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library("dplyr")
+library("tidyr")
+```
+
+
+```{r}
+abalone <- read.csv("~/Documents/Stage_Maeva_Girerd/data/tables/csv/abalone.csv")
+abalone$X <- NULL
+abalone
+```
+
+```{r}
+abalone
+```
+
+```{r}
+abalone
+
+# Group by the 'Sex' column and calculate the mean for each group
+mean_data <- abalone %>%
+  group_by(Sex) %>%
+  summarize(across(everything(), mean))
+
+# Transform the DataFrame into a long format suitable for ggplot2
+long_mean_data <- mean_data %>%
+  pivot_longer(cols = -Sex, names_to = "Parameter", values_to = "Mean")
+
+# Print the resulting DataFrame
+print(long_mean_data)
+
+# Create a plot with ggplot2
+ggplot(long_mean_data, aes(x = Parameter, y = Mean, fill = Sex)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Mean Values of Physical Parameters by Sex",
+       x = "Parameter",
+       y = "Mean Value") +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+abalone$Sex <-  ifelse(abalone$Sex == "I", 0, ifelse(abalone$Sex  == "M", 1, 2))
+abalone
+cor(abalone)
+```
+
+```{r}
+abalone_adult <-  abalone%>% filter(abalone$Sex != 0)
+cor(abalone_adult)
+```
+
+```{r}
+abalone_inf <- abalone%>% filter(abalone$Sex == 0)
+abalone_inf$Sex = NULL
+cor(abalone_inf)
+```
+
+```{r}
+abalone_male <- abalone%>% filter(abalone$Sex == 1)
+abalone_male$Sex = NULL
+cor(abalone_male)
+```
+
+```{r}
+abalone_female <- abalone%>% filter(abalone$Sex == 2)
+abalone_female$Sex = NULL
+cor(abalone_female)
+```
+
+```{r}
+cor_abalone <- cor(abalone)
+abalone['sex_category'] <- "all"
+
+cor_abalone_adult <- cor(abalone_adult)
+abalone_adult['sex_category'] <- "adults"
+
+cor_abalone_inf <- cor(abalone_inf)
+abalone_inf['sex_category'] <- "infants"
+
+cor_abalone_male <- cor(abalone_male)
+abalone_male['sex_category'] <- "male (adult)"
+
+cor_abalone_female <- cor(abalone_female)
+abalone_female['sex_category'] <- "female (adult)"
+
+
+create_df <- function(cor_abalone, var_name, category){
+  parameter_names <- colnames(cor_abalone)
+  correlation_values <- as.vector(cor_abalone[,var_name])
+  correlation_df <- data.frame(parameter = parameter_names, correlations = correlation_values)
+  print(correlation_df)
+  correlation_df$sex_category <- category
+  return(correlation_df)
+}
+
+var_name <- "Height"
+
+cor_abalone_df <- create_df(cor_abalone, var_name, "all")
+cor_abalone_adult_df <- create_df(cor_abalone_adult, var_name, "adult")
+cor_abalone_inf_df <- create_df(cor_abalone_inf, var_name, "inf")
+cor_abalone_male_df <- create_df(cor_abalone_male, var_name, "male")
+cor_abalone_female_df <- create_df(cor_abalone_female, var_name, "female")
+correlation_df <- rbind(cor_abalone_df, cor_abalone_adult_df)
+correlation_df <- rbind(correlation_df, cor_abalone_inf_df)
+correlation_df <- rbind(correlation_df, cor_abalone_male_df)
+correlation_df <- rbind(correlation_df, cor_abalone_female_df)
+correlation_df <- correlation_df %>% filter(parameter != "Sex" & parameter != "Height")
+  
+ggplot(correlation_df, aes(x = parameter, y = correlations, fill = sex_category)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Mean Values of Physical Parameters by Sex",
+       x = "Parameter",
+       y = "Correlations") + ggtitle(paste0("Correlation between ", var_name, " and the rest of the parameters"))+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+
+# Logiciels et code utilisés
+
+```{r}
+sessionInfo()
+```

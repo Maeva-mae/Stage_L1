@@ -1,0 +1,117 @@
+---
+title: "RNA Seq incomplet"
+output: html_notebook
+---
+
+
+# Libraries
+
+```{r}
+# installed Bioconductor
+# BiocManager::install("biocLite")
+# 
+# biocLite()
+# 
+# # Once this is completed:
+# biocLite("DESeq2")
+
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+
+# BiocManager::install("DESeq2")
+
+library(DESeq2)
+
+vignette("DESeq2")
+```
+
+
+
+# Preparing Data
+
+```{r}
+SRR647673 <- read.table("~/Documents/Stage_Maeva_Girerd/data/SRR647673_htseq.txt",head=FALSE)
+SRR647674 <- read.table("~/Documents/Stage_Maeva_Girerd/data/SRR647674_htseq.txt",head=FALSE)
+SRR647675 <- read.table("~/Documents/Stage_Maeva_Girerd/data/SRR647675_htseq.txt",head=FALSE)
+
+head(SRR647673)
+head(SRR647674)
+head(SRR647675)
+```
+```{r}
+# check to see if all elements of the V1 column are the same across all three datasets.
+
+all(SRR647673[,1]==SRR647674[,1]) && all(SRR647673[,1]==SRR647675[,1]) && all(SRR647674[,1]==SRR647675[,1])
+```
+```{r}
+# creating a new data.frame object.
+
+countData<-data.frame(row.names =SRR647673[,1],SRR647673=SRR647673[,2],SRR647674=SRR647674[,2],SRR647675=SRR647675[,2])
+head(countData)
+tail(countData)
+
+## Note that all samples contain a 0 for "gene:80", so remove it
+countData<-countData[-77,]
+tail(countData)
+```
+```{r}
+#  create a dataset of meta data, and then merge both our countData and metaData into one DESeqDataSet object.
+
+(metaData<-data.frame(row.names = colnames(countData), condition = c("30MinPI","2point5HoursPI","Lysogen")))
+```
+```{r}
+# now create our DESeqDataSet object:
+
+deseq.dat<- DESeqDataSetFromMatrix(countData = countData,
+                                   colData = metaData,
+                                   design = ~ condition)
+deseq.dat
+head(assay(deseq.dat))
+```
+```{r}
+# second method
+
+# sampleFiles<-grep("SRR",list.files(getwd()),value=TRUE)
+# sampleCondition<-c("30MinPI","2point5HoursPI","Lysogen")
+# sampleTable<-data.frame(sampleName=gsub("~/girerd/data/SRR647673_htseq.txt","",sampleFiles),
+#                         fileName = sampleFiles,
+#                         condition=sampleCondition)
+# deseq.dat2<-DESeqDataSetFromHTSeqCount(sampleTable=sampleTable,
+#                                      directory = getwd(),
+#                                      design= ~ condition)
+# deseq.dat2
+#head(assay(deseq.dat2))
+```
+
+
+# Using DESeq2
+
+```{r}
+dds <- DESeq(deseq.dat)#,quiet=TRUE)
+
+# error message but continue it's calculations
+```
+
+
+La version de DESeq2 qu'ils ont utilisé est trop ancienne par rapport à la notre et dans cette version on ne peut plus utiliser les échantillons comme réplicat donc nous sommes contraint d'arréter cette analyse ici.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+sessionInfo()
+```
+

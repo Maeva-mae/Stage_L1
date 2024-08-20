@@ -1,0 +1,47 @@
+---
+title: "RNA Seq deseq2"
+output: html_notebook
+---
+
+# Libraries
+
+```{r}
+# installed Bioconductor
+# BiocManager::install("biocLite")
+# 
+# biocLite()
+# 
+# # Once this is completed:
+# biocLite("DESeq2")
+
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+
+# BiocManager::install("DESeq2")
+
+library(DESeq2)
+
+vignette("DESeq2")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+sessionInfo()
+```
